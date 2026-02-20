@@ -1,2 +1,3 @@
 # mindgap-ai
-Adaptive Learning Companion with Gap estimation
+MindGap AI
+Adaptive learning system using agentic RAG and fine tuning.

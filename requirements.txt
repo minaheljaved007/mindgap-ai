@@ -1,6 +1,10 @@
-streamlit
-langchain
+flask
+flask-cors
 faiss-cpu
-pandas
-groq
 sentence-transformers
+PyPDF2
+python-dotenv
+requests
+numpy
+openai
+gunicorn

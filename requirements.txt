@@ -8,3 +8,4 @@ streamlit-extras
 streamlit-mic-recorder
 groq
 pydub
+gTTS

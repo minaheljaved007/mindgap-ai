@@ -60,4 +60,29 @@ if uploaded_file:
     content = uploaded_file.read().decode("utf-8")
     st.session_state.engine.process_document(content)
     st.success("Knowledge Base Updated!")
+    # Add this to your app.py
+st.markdown("""
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #0e1117 0%, #161b22 100%);
+    }
+    .stChatMessage {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(10px);
+        border-radius: 15px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 15px;
+    }
+    .stButton>button {
+        border-radius: 12px;
+        background: #7B61FF; /* Vibrant Purple */
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 15px rgba(123, 97, 255, 0.4);
+    }
+    </style>
+""", unsafe_allow_html=True)
     

@@ -1,32 +1,92 @@
-/* Modern Glassmorphism & Hover Effects */
-.stButton>button {
-    border-radius: 12px;
-    border: 1px solid #7B61FF;
-    transition: all 0.3s ease-in-out;
-    background: rgba(123, 97, 255, 0.1);
+.stApp{
+
+background:
+
+radial-gradient(
+
+circle at top,
+
+#020617,
+
+#020617,
+
+#020617,
+
+#020617,
+
+#0f172a
+
+);
+
+color:white;
+
+font-family:
+
+Inter;
+
 }
 
-.stButton>button:hover {
-    background: #7B61FF !important;
-    color: white !important;
-    transform: scale(1.05);
-    box-shadow: 0px 4px 15px rgba(123, 97, 255, 0.4);
+
+/* neon cards */
+
+.block-container{
+
+padding:2rem;
+
+border-radius:20px;
+
+background:
+
+rgba(255,255,255,0.03);
+
+backdrop-filter:
+
+blur(25px);
+
 }
 
-/* Custom Chat Bubbles */
-[data-testid="stChatMessage"] {
-    border-radius: 15px;
-    padding: 1rem;
-    margin-bottom: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+
+/* buttons */
+
+button{
+
+background:
+
+linear-gradient(
+
+45deg,
+
+#9333ea,
+
+#06b6d4
+
+);
+
+border-radius:12px;
+
+transition:0.3s;
+
 }
 
-/* Animations for new content */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+button:hover{
+
+transform:translateY(-2px);
+
+box-shadow:
+
+0 0 20px #06b6d4;
+
 }
 
-.main .block-container {
-    animation: fadeIn 0.8s ease-out;
+
+/* inputs */
+
+textarea,input{
+
+background:#020617 !important;
+
+border-radius:10px;
+
+color:white !important;
+
 }

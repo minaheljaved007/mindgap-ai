@@ -1,54 +1,55 @@
 import streamlit as st
-from rag_engine import MindGapEngine # Assuming your class name
 import os
+from rag_engine import MindGapEngine
 
-# 1. Page Configuration
-st.set_page_config(page_title="Mind Gap.ai", page_icon="🧠", layout="wide")
+# 1. Page Config
+st.set_page_config(page_title="MindGap AI", page_icon="🧠", layout="centered")
 
-# 2. Sidebar for Configuration/API Keys
+# Load CSS
+with open("assets/styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# 2. Sidebar Settings
 with st.sidebar:
-    st.title("Settings")
-    api_key = st.text_input("Enter OpenAI API Key", type="password")
-    if api_key:
-        os.environ["OPENAI_API_KEY"] = api_key
+    st.title("⚙️ Settings")
+    api_key = st.text_input("OpenAI API Key", type="password")
+    if st.button("Clear Database"):
+        if os.path.exists("./data"):
+            import shutil
+            shutil.rmtree("./data")
+            st.rerun()
 
-# 3. Initialize the Backend Engine
-@st.cache_resource
-def load_engine():
-    # This calls your existing rag_engine.py logic
-    return MindGapEngine()
+# 3. App Logic
+st.title("🧠 MindGap AI")
+st.caption("Closing the gap between what's in your notes and what's in your head.")
 
-engine = load_engine()
+if api_key:
+    engine = MindGapEngine(api_key)
+    
+    # File Upload Section
+    uploaded_file = st.file_uploader("Drop your notes here (txt/pdf)", type=['txt', 'pdf'])
+    if uploaded_file:
+        with st.spinner("Analyzing Knowledge Gaps..."):
+            content = uploaded_file.read().decode("utf-8")
+            msg = engine.process_document(content)
+            st.toast(msg)
 
-# 4. Main UI
-st.title("🧠 Mind Gap.ai")
-st.markdown("### Close the gap between your notes and your knowledge.")
+    # Chat Interface
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# File Uploader
-uploaded_file = st.file_uploader("Upload your notes (txt or pdf)", type=['txt', 'pdf'])
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-if uploaded_file:
-    # Logic to process the file using your rag_engine
-    with st.spinner("Analyzing your notes..."):
-        content = uploaded_file.read().decode("utf-8")
-        engine.process_document(content)
-    st.success("Notes indexed successfully!")
+    if prompt := st.chat_input("Ask about your weak areas..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-# Chat Interface
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-if prompt := st.chat_input("Ask about your notes..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        # Calling your RAG logic
-        response = engine.query(prompt)
-        st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            response = engine.query(prompt)
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+else:
+    st.warning("Please enter your OpenAI API Key in the sidebar to begin.")

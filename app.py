@@ -21,6 +21,11 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(10px); border-radius: 15px;
     }
+    if "student_profile" not in st.session_state:
+    st.session_state.student_profile = {
+        "weak_topics": [],
+        "mastery_score": 0
+    }
     </style>
     """, unsafe_allow_html=True)
 

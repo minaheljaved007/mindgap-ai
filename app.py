@@ -1,80 +1,54 @@
+import streamlit as st
+from rag_engine import MindGapEngine # Assuming your class name
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
-from database import init_db, save_score, get_weak_topics, get_performance_history
-from rag_engine import RAGEngine
-import json
 
-app = Flask(__name__)
-# Enable CORS for all routes and origins
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-app.config['UPLOAD_FOLDER'] = 'uploads'
+# 1. Page Configuration
+st.set_page_config(page_title="Mind Gap.ai", page_icon="🧠", layout="wide")
 
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# 2. Sidebar for Configuration/API Keys
+with st.sidebar:
+    st.title("Settings")
+    api_key = st.text_input("Enter OpenAI API Key", type="password")
+    if api_key:
+        os.environ["OPENAI_API_KEY"] = api_key
 
-# Initialize DB and RAG
-init_db()
-rag = RAGEngine()
+# 3. Initialize the Backend Engine
+@st.cache_resource
+def load_engine():
+    # This calls your existing rag_engine.py logic
+    return MindGapEngine()
 
-@app.route('/api/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-    
-    filename = secure_filename(file.filename)
-    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(path)
-    
-    num_chunks = rag.process_file(path)
-    return jsonify({"message": f"File uploaded and processed into {num_chunks} chunks.", "filename": filename})
+engine = load_engine()
 
-@app.route('/api/lesson', methods=['POST'])
-def get_lesson():
-    data = request.json
-    topic = data.get('topic')
-    context_chunks = rag.search(topic)
-    context = "\n".join(context_chunks)
-    
-    lesson = rag.generate_response(topic, context)
-    return jsonify({"lesson": lesson})
+# 4. Main UI
+st.title("🧠 Mind Gap.ai")
+st.markdown("### Close the gap between your notes and your knowledge.")
 
-@app.route('/api/quiz', methods=['POST'])
-def get_quiz():
-    data = request.json
-    topic = data.get('topic')
-    context_chunks = rag.search(topic)
-    context = "\n".join(context_chunks)
-    
-    quiz_json = rag.generate_quiz(topic, context)
-    try:
-        # Grok might return it wrapped in markdown or just raw JSON
-        quiz_data = json.loads(quiz_json)
-        return jsonify(quiz_data)
-    except:
-        return jsonify({"error": "Failed to generate quiz JSON", "raw": quiz_json}), 500
+# File Uploader
+uploaded_file = st.file_uploader("Upload your notes (txt or pdf)", type=['txt', 'pdf'])
 
-@app.route('/api/save-performance', methods=['POST'])
-def save_performance():
-    data = request.json
-    topic = data.get('topic')
-    score = data.get('score')
-    total = data.get('total')
-    level = data.get('level', 'beginner')
-    
-    save_score(topic, score, total, level)
-    return jsonify({"status": "success"})
+if uploaded_file:
+    # Logic to process the file using your rag_engine
+    with st.spinner("Analyzing your notes..."):
+        content = uploaded_file.read().decode("utf-8")
+        engine.process_document(content)
+    st.success("Notes indexed successfully!")
 
-@app.route('/api/stats', methods=['GET'])
-def get_stats():
-    weak = get_weak_topics()
-    history = get_performance_history()
-    return jsonify({"weak_topics": weak, "history": history})
+# Chat Interface
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 7860))
-    app.run(host='0.0.0.0', port=port)
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Ask about your notes..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        # Calling your RAG logic
+        response = engine.query(prompt)
+        st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})

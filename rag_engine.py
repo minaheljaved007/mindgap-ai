@@ -1,66 +1,362 @@
 import os
+import json
 import streamlit as st
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA
+
 from groq import Groq
-from gtts import gTTS
-import base64
+from pinecone import Pinecone
+
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+
+# ==============================
+# Helper Functions
+# ==============================
+
+PROFILE_PATH = "./data/student_profile.json"
+
+
+def load_profile():
+
+    os.makedirs("./data", exist_ok=True)
+
+    if not os.path.exists(PROFILE_PATH):
+
+        profile = {
+
+            "name": "Student",
+
+            "weak_topics": [],
+
+            "difficulty": "easy",
+
+            "achievements": [],
+
+            "quiz_scores": []
+
+        }
+
+        save_profile(profile)
+
+        return profile
+
+    with open(PROFILE_PATH, "r") as f:
+
+        return json.load(f)
+
+
+def save_profile(profile):
+
+    with open(PROFILE_PATH, "w") as f:
+
+        json.dump(profile, f, indent=2)
+
+
+# ==============================
+# Main Engine
+# ==============================
 
 class MindGapEngine:
+
     def __init__(self):
-        # Securely fetch keys from Streamlit Secrets
-        self.api_key = st.secrets["OPENAI_API_KEY"]
-        self.groq_key = st.secrets.get("GROQ_API_KEY", "")
-        
-        self.embeddings = OpenAIEmbeddings(openai_api_key=self.api_key)
-        # Using gpt-4o-mini for fast, smart reasoning
-        self.llm = ChatOpenAI(model_name="gpt-4o-mini", openai_api_key=self.api_key, temperature=0.3)
-        self.vector_db = None
 
-    def process_document(self, text_content):
-        # Recursive splitting preserves educational context better than basic splitting
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, 
-            chunk_overlap=150,
-            separators=["\n\n", "\n", ".", " ", ""]
+        # ---- GROQ CLIENT ----
+
+        self.client = Groq(
+
+            api_key=st.secrets["GROQ_API_KEY"]
+
         )
-        docs = text_splitter.create_documents([text_content])
-        
-        self.vector_db = Chroma.from_documents(
-            documents=docs, 
-            embedding=self.embeddings,
-            persist_directory="./data/chroma_db"
+
+        # ---- PINECONE ----
+
+        self.pc = Pinecone(
+
+            api_key=st.secrets["PINECONE_API_KEY"]
+
         )
-        return "🧠 Knowledge Base Updated!"
 
-    def query(self, user_question):
-        if not self.vector_db:
-            return "Please upload some notes first!"
-        
-        retriever = self.vector_db.as_retriever(search_kwargs={"k": 3})
-        qa_chain = RetrievalQA.from_chain_type(llm=self.llm, retriever=retriever)
-        return qa_chain.run(user_question)
+        self.index = self.pc.Index("mindgap")
 
-    def transcribe_audio(self, audio_bytes):
-        """Ultra-fast transcription using Groq Whisper"""
-        if not self.groq_key: return "Groq API key missing in Secrets."
-        client = Groq(api_key=self.groq_key)
-        with open("temp.wav", "wb") as f: f.write(audio_bytes)
-        with open("temp.wav", "rb") as file:
-            transcription = client.audio.transcriptions.create(
-                file=("temp.wav", file.read()),
-                model="whisper-large-v3-turbo",
-                response_format="text",
+        self.profile = load_profile()
+
+    # ==============================
+    # TEXT CHUNKING
+    # ==============================
+
+    def split_text(self, text):
+
+        splitter = RecursiveCharacterTextSplitter(
+
+            chunk_size=900,
+
+            chunk_overlap=150
+
+        )
+
+        docs = splitter.split_text(text)
+
+        return docs
+
+    # ==============================
+    # EMBEDDING USING GROQ MODEL
+    # ==============================
+
+    def embed(self, text):
+
+        emb = self.client.embeddings.create(
+
+            model="nomic-embed-text-v1",
+
+            input=text
+
+        )
+
+        return emb.data[0].embedding
+
+    # ==============================
+    # DOCUMENT INGESTION
+    # ==============================
+
+    def process_document(self, text):
+
+        docs = self.split_text(text)
+
+        vectors = []
+
+        for i, chunk in enumerate(docs):
+
+            vec = self.embed(chunk)
+
+            vectors.append(
+
+                (
+
+                    f"id-{i}",
+
+                    vec,
+
+                    {
+
+                        "text": chunk,
+
+                        "topic": chunk.split(" ")[0].lower()
+
+                    }
+
+                )
+
             )
-        return transcription
 
-    def get_audio_html(self, text):
-        """Generates an auto-playing audio component for the UI"""
-        tts = gTTS(text=text, lang='en')
-        tts.save("speech.mp3")
-        with open("speech.mp3", "rb") as f:
-            data = f.read()
-            b64 = base64.b64encode(data).decode()
-            return f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
+        self.index.upsert(vectors)
+
+        return "Knowledge Base Updated"
+
+    # ==============================
+    # HYBRID SEARCH
+    # ==============================
+
+    def hybrid_search(self, query):
+
+        keyword = query.split(" ")[0].lower()
+
+        embedding = self.embed(query)
+
+        results = self.index.query(
+
+            vector=embedding,
+
+            top_k=5,
+
+            include_metadata=True,
+
+            filter={
+
+                "topic": {
+
+                    "$eq": keyword
+
+                }
+
+            }
+
+        )
+
+        context = ""
+
+        if "matches" in results:
+
+            for match in results["matches"]:
+
+                context += match["metadata"]["text"] + "\n"
+
+        return context
+
+    # ==============================
+    # MAIN QA RESPONSE
+    # ==============================
+
+    def ask(self, question):
+
+        context = self.hybrid_search(question)
+
+        profile = self.profile
+
+        prompt = f"""
+You are MindGap AI tutor.
+
+Student Profile:
+
+Weak Topics:
+{profile['weak_topics']}
+
+Difficulty:
+{profile['difficulty']}
+
+Teach adaptively.
+
+Context:
+
+{context}
+
+Question:
+
+{question}
+
+Give step by step explanation.
+"""
+
+        completion = self.client.chat.completions.create(
+
+            model="llama3-70b-8192",
+
+            messages=[
+
+                {
+
+                    "role": "user",
+
+                    "content": prompt
+
+                }
+
+            ],
+
+            temperature=0.4
+
+        )
+
+        answer = completion.choices[0].message.content
+
+        return answer
+
+    # ==============================
+    # GAP ANALYSIS
+    # ==============================
+
+    def gap_analysis(self, student_answer):
+
+        prompt = f"""
+
+Analyse student answer.
+
+Student said:
+
+{student_answer}
+
+Find:
+
+weak concepts.
+
+Return comma separated weak topics.
+"""
+
+        completion = self.client.chat.completions.create(
+
+            model="llama3-70b-8192",
+
+            messages=[
+
+                {
+
+                    "role": "user",
+
+                    "content": prompt
+
+                }
+
+            ]
+
+        )
+
+        weak = completion.choices[0].message.content
+
+        topics = [w.strip() for w in weak.split(",")]
+
+        self.profile["weak_topics"] = list(
+
+            set(self.profile["weak_topics"] + topics)
+
+        )
+
+        save_profile(self.profile)
+
+        return topics
+
+    # ==============================
+    # QUIZ GENERATION
+    # ==============================
+
+    def generate_quiz(self, topic):
+
+        prompt = f"""
+
+Create 3 short quiz questions.
+
+Difficulty:
+
+{self.profile['difficulty']}
+
+Topic:
+
+{topic}
+
+Return numbered list.
+"""
+
+        completion = self.client.chat.completions.create(
+
+            model="llama3-70b-8192",
+
+            messages=[
+
+                {
+
+                    "role": "user",
+
+                    "content": prompt
+
+                }
+
+            ]
+
+        )
+
+        return completion.choices[0].message.content
+
+    # ==============================
+    # UPDATE SCORE
+    # ==============================
+
+    def update_score(self, score):
+
+        self.profile["quiz_scores"].append(score)
+
+        if score > 80:
+
+            self.profile["achievements"].append(
+
+                "⭐ Quick Learner"
+
+            )
+
+        save_profile(self.profile)

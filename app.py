@@ -90,4 +90,9 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-    
+   with st.sidebar:
+    st.title("📊 My Learning Gap")
+    st.metric("Mastery Level", f"{st.session_state.student_profile['mastery_score']}%")
+    st.write("🔥 Weak Areas to Focus:")
+    for topic in st.session_state.student_profile['weak_topics']:
+        st.error(topic) 

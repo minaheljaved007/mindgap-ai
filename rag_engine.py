@@ -74,3 +74,13 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=150,
     separators=["\n\n", "\n", ".", " ", ""]
 )
+from groq import Groq
+
+def transcribe_voice(audio_bytes):
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    # Save to temp file and send to Groq API
+    transcription = client.audio.transcriptions.create(
+        file=("audio.wav", audio_bytes),
+        model="whisper-large-v3"
+    )
+    return transcription.text

@@ -10,20 +10,21 @@ import base64
 
 class MindGapEngine:
     def __init__(self):
-        # Fetching keys from Streamlit Secrets
+        # Securely fetch keys from Streamlit Secrets
         self.api_key = st.secrets["OPENAI_API_KEY"]
         self.groq_key = st.secrets.get("GROQ_API_KEY", "")
         
         self.embeddings = OpenAIEmbeddings(openai_api_key=self.api_key)
+        # Using gpt-4o-mini for fast, smart reasoning
         self.llm = ChatOpenAI(model_name="gpt-4o-mini", openai_api_key=self.api_key, temperature=0.3)
         self.vector_db = None
 
     def process_document(self, text_content):
-        # Recursive Chunking for better context preservation
+        # Recursive splitting preserves educational context better than basic splitting
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, 
             chunk_overlap=150,
-            separators=["\n\n", "\n", ".", " "]
+            separators=["\n\n", "\n", ".", " ", ""]
         )
         docs = text_splitter.create_documents([text_content])
         
@@ -32,7 +33,7 @@ class MindGapEngine:
             embedding=self.embeddings,
             persist_directory="./data/chroma_db"
         )
-        return "Knowledge Base Updated!"
+        return "🧠 Knowledge Base Updated!"
 
     def query(self, user_question):
         if not self.vector_db:
@@ -43,6 +44,7 @@ class MindGapEngine:
         return qa_chain.run(user_question)
 
     def transcribe_audio(self, audio_bytes):
+        """Ultra-fast transcription using Groq Whisper"""
         if not self.groq_key: return "Groq API key missing in Secrets."
         client = Groq(api_key=self.groq_key)
         with open("temp.wav", "wb") as f: f.write(audio_bytes)
@@ -55,6 +57,7 @@ class MindGapEngine:
         return transcription
 
     def get_audio_html(self, text):
+        """Generates an auto-playing audio component for the UI"""
         tts = gTTS(text=text, lang='en')
         tts.save("speech.mp3")
         with open("speech.mp3", "rb") as f:

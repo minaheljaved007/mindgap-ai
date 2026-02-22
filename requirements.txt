@@ -1,6 +1,7 @@
 streamlit
-openai
-python-dotenv
 langchain
+langchain-openai
 chromadb
 pypdf
+python-dotenv
+streamlit-extras

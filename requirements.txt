@@ -2,6 +2,7 @@ streamlit
 langchain
 langchain-openai
 chromadb
+langchain-community
 pypdf
 python-dotenv
 streamlit-extras

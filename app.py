@@ -1,13 +1,12 @@
 import streamlit as st
 import os
-import base64
 from rag_engine import MindGapEngine
 from streamlit_mic_recorder import mic_recorder
 
-# 1. Page Configuration
+# 1. Advanced Page Setup
 st.set_page_config(page_title="MindGap AI", page_icon="🧠", layout="wide")
 
-# 2. Advanced Modern UI (CSS)
+# 2. Modern UI Design (Glassmorphism & Custom Styling)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0e1117 0%, #161b22 100%); color: white; }
@@ -27,84 +26,76 @@ st.markdown("""
         backdrop-filter: blur(10px);
         border-radius: 15px !important;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Initialize Engine using Secrets
+# 3. Initialize Engine
 @st.cache_resource
 def load_engine():
-    # Uses st.secrets internally for secure deployment
     return MindGapEngine()
 
 if "OPENAI_API_KEY" in st.secrets:
     engine = load_engine()
 else:
-    st.error("Please add OPENAI_API_KEY to Streamlit Secrets.")
+    st.error("Missing API Keys! Please add OPENAI_API_KEY to Streamlit Secrets.")
     st.stop()
 
-# 4. Sidebar Dashboard (Adaptive Logic)
+# 4. Sidebar Adaptive Dashboard
 with st.sidebar:
-    st.title("📊 Learning Progress")
+    st.title("📊 My Learning")
     if "mastery" not in st.session_state:
-        st.session_state.mastery = 0
-    st.progress(st.session_state.mastery / 100, text=f"Mastery: {st.session_state.mastery}%")
-    st.info("🔥 Streak: 3 Days")
+        st.session_state.mastery = 35
+    st.progress(st.session_state.mastery / 100, text=f"Concept Mastery: {st.session_state.mastery}%")
+    st.info("🔥 Current Streak: 3 Days")
     st.write("---")
-    st.write("Settings")
-    if st.button("Clear History"):
-        st.session_state.messages = []
-        st.rerun()
+    st.write("💡 **Gap Identified:** Focus on 'Neural Network Layers'")
 
-# 5. Main UI Logic
+# 5. Main Application Logic
 st.title("🧠 MindGap AI")
-st.caption("Closing knowledge gaps through adaptive RAG and Voice.")
+st.caption("Closing knowledge gaps with Voice and Adaptive AI.")
 
-# Tab Selection for a cleaner UI
-tab1, tab2 = st.tabs(["💬 Interactive Learning", "📁 Document Sync"])
+tab1, tab2 = st.tabs(["💬 Voice & Chat", "📁 Sync Documents"])
 
 with tab2:
-    uploaded_file = st.file_uploader("Upload study materials", type=['txt', 'pdf'])
+    uploaded_file = st.file_uploader("Upload Notes (PDF/TXT)", type=['txt', 'pdf'])
     if uploaded_file:
-        with st.spinner("Analyzing gaps..."):
+        with st.spinner("Analyzing Knowledge Gaps..."):
             content = uploaded_file.read().decode("utf-8")
             engine.process_document(content)
-            st.success("Notes indexed! You can now start the quiz or chat.")
+            st.success("Brain Synced! Start chatting or speaking.")
 
 with tab1:
-    # Voice Interaction
+    # Voice Interaction Component
     st.write("### 🎙️ Voice Assistant")
-    audio = mic_recorder(start_prompt="Speak to AI", stop_prompt="Stop Recording", key='recorder')
+    audio = mic_recorder(start_prompt="Click to Speak", stop_prompt="Process Voice", key='recorder')
 
-    # Chat Interface
+    # Chat History
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    # Handle Voice Input
+    # Handle Audio/Voice Input
     if audio:
         user_text = engine.transcribe_audio(audio['bytes'])
         st.session_state.messages.append({"role": "user", "content": f"🎤 {user_text}"})
-        with st.chat_message("user"):
-            st.markdown(f"🎤 {user_text}")
-
+        
         with st.chat_message("assistant"):
             response = engine.query(user_text)
             st.markdown(response)
+            # Inject auto-playing speech
+            st.markdown(engine.get_audio_html(response), unsafe_allow_html=True)
             st.session_state.messages.append({"role": "assistant", "content": response})
-            # Speech-to-Speech: Auto-play the AI response
-            audio_html = engine.get_audio_html(response)
-            st.markdown(audio_html, unsafe_allow_html=True)
+        st.rerun()
 
-    # Handle Text Input
-    if prompt := st.chat_input("Ask a question about your notes..."):
+    # Handle Standard Text Input
+    if prompt := st.chat_input("Ask a question..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
+        with st.chat_message("user"): st.markdown(prompt)
         with st.chat_message("assistant"):
             response = engine.query(prompt)
             st.markdown(response)

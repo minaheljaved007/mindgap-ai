@@ -226,9 +226,7 @@ Give step by step explanation.
 """
 
         completion = self.client.chat.completions.create(
-
-            model="llama3-70b-8192",
-
+model="llama-text-embed-v2",
             messages=[
 
                 {

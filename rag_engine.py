@@ -66,3 +66,11 @@ class MindGapEngine:
             data = f.read()
             b64 = base64.b64encode(data).decode()
             return f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Inside your process_document function:
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000, 
+    chunk_overlap=150,
+    separators=["\n\n", "\n", ".", " ", ""]
+)

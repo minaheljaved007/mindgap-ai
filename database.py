@@ -1,25 +1,34 @@
-import os
 import streamlit as st
+from groq import Groq
+from pinecone import Pinecone
+import json
 
-def get_db_connection():
-    """
-    Creates or connects to the database.
-    Using @st.cache_resource ensures we don't reconnect on every click.
-    """
-    # Create a 'data' directory if it doesn't exist for your vector store
-    if not os.path.exists("./data"):
-        os.makedirs("./data")
-    
-    # Example: If using SQLite or ChromaDB locally
-    db_path = "./data/mindgap_vectorstore"
-    
-    # Return your connection object here
-    # return YourDBClient(db_path)
-    return db_path
+class MindGapEngine:
 
-def clear_database():
-    """Helper to reset the app state if needed."""
-    if os.path.exists("./data"):
-        import shutil
-        shutil.rmtree("./data")
-        st.success("Database cleared!")
+ def __init__(self):
+
+  self.client = Groq(
+   api_key=st.secrets["GROQ_API_KEY"]
+  )
+
+  self.pc = Pinecone(
+   api_key=st.secrets["PINECONE_API_KEY"]
+  )
+
+  self.index = self.pc.Index("mindgap")
+
+
+ def hybrid_search(self,query):
+
+  # keyword filter example
+  keyword=query.split()[0]
+
+  result = self.index.query(
+
+   vector=self.embed(query),
+   filter={"topic":{"$eq":keyword}},
+   top_k=5
+
+  )
+
+  return result

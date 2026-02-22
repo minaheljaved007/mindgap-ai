@@ -1,88 +1,16 @@
-MindGap AI
+# React + Vite
 
-## What It Solves
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-- Students drown in content but miss essentials
-- One-size-fits-all education fails everyone
-- Nobody knows what they don't know
-- Generic resources waste hours of study time
+Currently, two official plugins are available:
 
-## The Fix
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-- AI finds your exact knowledge gaps
-- Learns your level and adapts automatically
-- Reinforces weak spots like a personal tutor
-- Zero fluff — only what you need to learn
+## React Compiler
 
-## Tech Stack
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-**Frontend**
-- React + Vite — Instant loads, fast development
-- Tailwind CSS — Clean UI without design headaches
+## Expanding the ESLint configuration
 
-**Backend**
-- Flask + SQLite — Lightweight, zero config
-- FAISS — Lightning-fast vector search
-- Sentence-Transformers — Smart text embeddings
-- Groq Llama 3.3 — Fast, intelligent lesson generation
-
-## Project Structure
-
-```
-MindGap-AI/
-├── backend/
-│   ├── app.py          # API routes & request handling
-│   ├── rag_engine.py   # FAISS + embeddings + Groq logic
-│   └── database.py     # Progress & user data
-├── frontend/
-│   └── src/
-│       ├── App.jsx     # Main app component
-│       └── components/ # Reusable UI pieces
-```
-
-## Key Features
-
-- **Topic Learning** — Pick a subject, start instantly
-- **File Upload** — Drop PDFs, build your knowledge base
-- **Progress Dashboard** — See strengths vs. weaknesses
-- **Adaptive Lessons** — AI adjusts difficulty in real-time
-- **Interactive Quizzes** — Instant feedback on answers
-- **Memory Tracking** — System remembers and reinforces weak spots
-
-## Quick Start
-
-**Backend**
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-# Add GROQ_API_KEY to .env
-python app.py
-```
-
-**Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-# Open localhost — done!
-```
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/lessons/generate` | POST | Generate lesson for a topic |
-| `/api/quiz/generate` | POST | Create quiz questions |
-| `/api/quiz/submit` | POST | Submit answers, get feedback |
-| `/api/upload` | POST | Upload study materials |
-| `/api/progress` | GET | Fetch learning progress |
-
-## Environment Setup
-
-Create `backend/.env`:
-```env
-GROQ_API_KEY=your_api_key_here
-```
-
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

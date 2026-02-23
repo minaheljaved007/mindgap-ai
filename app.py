@@ -1,182 +1,123 @@
 import streamlit as st
 from rag_engine import MindGapEngine
-from database import load_profile,add_score
+from database import load_profile, add_score
 from analytics import show_analytics
 from voice_utils import text_to_voice
 
-from streamlit_mic_recorder import mic_recorder
-
 from PyPDF2 import PdfReader
-
 from PIL import Image
-
 import pytesseract
-
+import os
 
 st.set_page_config(
-
- layout="wide",
-
- page_title="MindGap AI"
-
+    layout="wide",
+    page_title="MindGap AI"
 )
 
+# ---------- CSS ----------
+css_path="assets/styles.css"
 
-# load css
-
-with open("assets/styles.css") as f:
-
- st.markdown(
-
- f"<style>{f.read()}</style>",
-
- unsafe_allow_html=True
-
- )
+if os.path.exists(css_path):
+    with open(css_path) as f:
+        st.markdown(
+            f"<style>{f.read()}</style>",
+            unsafe_allow_html=True
+        )
 
 
-engine=MindGapEngine()
+engine = MindGapEngine()
+profile = load_profile()
 
-profile=load_profile()
-
-
-# sidebar
+# Sidebar
 
 st.sidebar.title("MindGap AI")
 
 st.sidebar.metric(
-
-"XP",
-
-profile["xp"]
-
+    "XP",
+    profile["xp"]
 )
 
 st.sidebar.write(profile["achievements"])
 
 
+# ---------- Upload ----------
 
-# upload
-
-file=st.file_uploader(
-
-"Upload Study Material",
-
-["pdf","png","jpg","txt"]
-
+file = st.file_uploader(
+    "Upload Study Material",
+    ["pdf","png","jpg","txt"]
 )
 
 
 def extract(file):
 
- if file.type=="application/pdf":
+    if file.type=="application/pdf":
 
-  pdf=PdfReader(file)
+        pdf = PdfReader(file)
 
-  txt=""
+        text=""
 
-  for p in pdf.pages:
+        for p in pdf.pages:
+            text+=p.extract_text() or ""
 
-   txt+=p.extract_text()
+        return text
 
-  return txt
 
- if "image" in file.type:
+    if "image" in file.type:
 
-  img=Image.open(file)
+        img=Image.open(file)
 
-  return pytesseract.image_to_string(img)
+        return pytesseract.image_to_string(img)
 
- return file.read().decode()
-
+    return file.read().decode()
 
 
 if file:
 
- txt=extract(file)
+    txt = extract(file)
 
- st.success(
-
- engine.process_document(txt)
-
- )
+    st.success(
+        engine.process_document(txt)
+    )
 
 
-question=st.text_area(
+# ---------- ASK ----------
 
-"Ask Tutor"
-
+question = st.text_area(
+    "Ask Tutor"
 )
-
 
 if st.button("Ask"):
 
- ans=engine.ask(question)
+    ans = engine.ask(question)
 
- st.success(ans)
+    st.success(ans)
 
- audio=text_to_voice(ans)
+    audio = text_to_voice(ans)
 
- st.audio(audio)
-
-
-
-# voice
-
-audio=mic_recorder()
-
-if audio:
-
- open("voice.wav","wb").write(
-
- audio["bytes"]
-
- )
+    if audio:
+        st.audio(audio)
 
 
- t=engine.client.audio.transcriptions.create(
-
- file=open("voice.wav","rb"),
-
- model="whisper-large-v3"
-
- )
-
- ans=engine.ask(t.text)
-
- st.success(ans)
-
- st.audio(text_to_voice(ans))
-
-
-
-# quiz
+# ---------- QUIZ ----------
 
 if st.button("Generate Quiz"):
 
- st.info(
-
- engine.generate_quiz(question)
-
- )
+    st.info(
+        engine.generate_quiz(question)
+    )
 
 
-score=st.slider(
-
-"Quiz Score",
-
-0,
-
-100
-
+score = st.slider(
+    "Quiz Score",
+    0,
+    100
 )
 
 if st.button("Update Score"):
 
- add_score(score)
+    add_score(score)
 
- st.success("Saved")
-
+    st.success("Saved")
 
 
 show_analytics()

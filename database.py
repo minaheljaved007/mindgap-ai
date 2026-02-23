@@ -1,74 +1,69 @@
 import os
 import json
 
-DATA_PATH="./data"
+DATA_PATH="data"
 
-PROFILE_FILE=f"{DATA_PATH}/student_profile.json"
+PROFILE_FILE=os.path.join(
+    DATA_PATH,
+    "student_profile.json"
+)
 
 
 def ensure():
 
- os.makedirs(DATA_PATH,exist_ok=True)
+    os.makedirs(DATA_PATH,exist_ok=True)
 
 
 def load_profile():
 
- ensure()
+    ensure()
 
- if not os.path.exists(PROFILE_FILE):
+    if not os.path.exists(PROFILE_FILE):
 
-  profile={
+        profile={
 
-   "name":"Student",
+            "name":"Student",
+            "difficulty":"easy",
+            "weak_topics":[],
+            "quiz_scores":[],
+            "xp":0,
+            "achievements":[]
+        }
 
-   "difficulty":"easy",
+        save_profile(profile)
 
-   "weak_topics":[],
+        return profile
 
-   "quiz_scores":[],
+    with open(PROFILE_FILE,"r") as f:
 
-   "xp":0,
-
-   "achievements":[]
-
-  }
-
-  save_profile(profile)
-
-  return profile
-
- with open(PROFILE_FILE,"r") as f:
-
-  return json.load(f)
+        return json.load(f)
 
 
 
 def save_profile(profile):
 
- ensure()
+    ensure()
 
- with open(PROFILE_FILE,"w") as f:
+    with open(PROFILE_FILE,"w") as f:
 
-  json.dump(profile,f,indent=2)
+        json.dump(profile,f,indent=2)
 
 
 
 def add_score(score):
 
- profile=load_profile()
+    profile=load_profile()
 
- profile["quiz_scores"].append(score)
+    profile["quiz_scores"].append(score)
 
- profile["xp"]+=score
+    profile["xp"]+=score
 
- if score>80:
+    if score>80:
 
-  profile["achievements"].append(
+        profile["achievements"].append(
+            "⭐ High Performer"
+        )
 
-  "⭐ High Performer"
+    save_profile(profile)
 
-  )
-
- save_profile(profile)
-
- return profile
+    return profile
